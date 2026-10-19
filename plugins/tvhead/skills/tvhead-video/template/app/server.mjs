@@ -13,7 +13,7 @@ import { DEFAULT_VOICES, provider } from '../lib/voice.mjs';
 import { listLibrary, addLibraryItem, updateLibraryItem, deleteLibraryItem, attachToJob } from './library.mjs';
 import { PARTS } from '../lib/parts.mjs';
 
-const PORT = +(process.env.TVHEAD_PORT || 4777), VERSION = '2.0.0';
+const PORT = +(process.env.TVHEAD_PORT || 4777), VERSION = '2.2.0';
 // .env (same loader as make.mjs) so the key status is accurate
 const envFile = path.join(STUDIO, '.env');
 if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
