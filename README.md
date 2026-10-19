@@ -1,12 +1,13 @@
 # tvhead studio: from a topic to a finished motion video
 
-A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a topic and get a **finished 1920×1080 mp4** narrated in **English, Russian or both**. The style is hand-drawn and black-and-white: TV-headed stick figures on grey paper, floating pencil doodles, boiling lines and film grain.
+A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a topic and get a **finished mp4**, horizontal **1920×1080** or vertical **1080×1920** (Shorts, Reels, TikTok), narrated in **English, Russian or both**. The style is hand-drawn and black-and-white: TV-headed stick figures on grey paper, floating pencil doodles, boiling lines and film grain.
 
 ![One frame per scene of the demo episode](docs/tvhead-preview.jpg)
 
 ## Features
 
 - **Free narration.** Fish Audio S2.1 (free tier) runs through OpenRouter. Use any voice from the fish.audio library or your own clone: the id is in the link, `fish.audio/m/<id>`.
+- **16:9 or 9:16.** Set `"format": "9:16"` (or flip the toggle in the app) for vertical video. Layouts, kinetic type, camera moves and captions are re-laid for the tall frame; captions stay clear of the Shorts/Reels/TikTok UI. Any story can also be rendered the other way with `--format 9:16`.
 - **EN, RU or both from one story.** The pictures are shared, and each language gets its own voice and timing. You get `out/<slug>.en.mp4` and `out/<slug>.ru.mp4`, each with an `.srt`.
 - **Edited like a motion designer would.**
   - Velocity-matched transitions: cut-the-curve, zoom-through and inverse zoom, plus whip pan, iris, wipe and page.
@@ -22,7 +23,7 @@ A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a to
 ![Storyboard in the app](docs/app-storyboard.jpg)
 
 1. In the studio folder, run `start-app.cmd` (Windows), `./start-app.sh` or `npm run app`. It opens http://localhost:4777.
-2. Pick the languages (EN / RU / EN + RU), choose a style or drop in reference images, and type the topic.
+2. Pick the languages (EN / RU / EN + RU) and the format (16:9 / 9:16), choose a style or drop in reference images, and type the topic.
 3. Tell Claude in chat: **"check the tvhead app"**. Claude starts listening to the app (the header shows "Claude is listening"), picks up the brief, and writes the script and a storyboard with transitions.
 4. Review the frames. You can edit the narration right in the cards or send feedback. Then press **Render**.
 5. Watch and download the finished videos in the app.
@@ -63,6 +64,7 @@ Commands inside the studio:
 node make.mjs demo --stills auto     # one frame per scene → episodes/demo/build/<lang>/sheet.png
 node make.mjs demo --preview         # fast 720p draft
 node make.mjs demo                   # final 1080p for every language
+node make.mjs demo --format 9:16     # the same story as a vertical 1080×1920 video
 node voices.mjs deep calm --lang en  # search Fish voices (no key needed)
 ```
 
