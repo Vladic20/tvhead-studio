@@ -1,0 +1,8 @@
+.env
+node_modules/
+out/
+.DS_Store
+plugins/tvhead/skills/tvhead-video/template/episodes/*/build/
+plugins/tvhead/skills/tvhead-video/template/app/thumbs/
+.app.json
+.claude-heartbeat

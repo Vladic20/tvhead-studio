@@ -1,0 +1,9 @@
+{
+  "name": "tvhead",
+  "description": "Topic → finished narrated 16:9 doodle motion video in EN/RU: TV-head stick figures, transitions, kinetic type, infographics, free Fish Audio voices via OpenRouter, local studio app (brief → storyboard → render)",
+  "author": { "name": "Vladic20" },
+  "version": "2.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/Vladic20/tvhead-studio",
+  "keywords": ["video", "motion-graphics", "animation", "explainer", "tts", "fish-audio", "openrouter", "skill", "russian"]
+}

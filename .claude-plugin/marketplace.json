@@ -1,0 +1,12 @@
+{
+  "name": "tvhead-studio",
+  "owner": { "name": "Vladic20" },
+  "description": "Topic → finished narrated doodle motion video (EN/RU) for Claude Code, with a local studio app",
+  "plugins": [
+    {
+      "name": "tvhead",
+      "source": "./plugins/tvhead",
+      "description": "Ask for a video on any topic, get a 1080p mp4 with free Fish Audio narration in English, Russian or both: TV-head doodles, velocity-matched transitions, kinetic type, infographics; brief/storyboard/render app"
+    }
+  ]
+}
