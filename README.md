@@ -13,6 +13,7 @@ A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a to
   - Velocity-matched transitions: cut-the-curve, zoom-through and inverse zoom, plus whip pan, iris, wipe and page.
   - Kinetic type: each word lands exactly when it is spoken.
   - Doodle infographics: counter, bars, pie, progress, timeline, checklist and an odd-one-out grid.
+- **Your own cast and world.** In the app's **Cast & world** tab, save cards for characters, places, styles and ideas, with reference images. Tick them in a brief, or just describe who and where in two text fields. Claude turns them into characters built from about 70 parts (11 heads, 9 bodies, 14 hats, glasses, ties, backpacks, capes, held items) and 16 environments (office, city at night, subway, forest, sea, space, stage…) with rain, snow, leaves or wind. Anything missing, Claude invents from the topic's meaning or draws as new parts in code. The storyboard opens with a cast sheet you can approve or correct.
 - **A living rig.** About 20 poses and 17 faces. The figures anticipate moves, their antennas swing after a move, and they squash on landing. There are about 50 props.
 - **Themes and references.** Six palettes: grey paper, sepia, blueprint, chalkboard, night and mint. You can also upload your own frames, and Claude takes the palette and pacing from them. User photos can appear in the video as taped polaroids.
 - **Custom motion.** For one-off scenes, write GSAP timelines (seeked and deterministic) inside the episode.
@@ -22,8 +23,8 @@ A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a to
 
 ![Storyboard in the app](docs/app-storyboard.jpg)
 
-1. In the studio folder, run `start-app.cmd` (Windows), `./start-app.sh` or `npm run app`. It opens http://localhost:4777.
-2. Pick the languages (EN / RU / EN + RU) and the format (16:9 / 9:16), choose a style or drop in reference images, and type the topic.
+1. Double-click the **tvhead studio** shortcut on your desktop (create it once with `npm run shortcut` in the studio, or `bootstrap.sh --shortcut`). It starts the app in the background (no console window) and opens http://localhost:4777; clicking it again just reopens the page. The ⏻ button in the header stops it. (`start-app.cmd` / `./start-app.sh` / `npm run app` do the same.)
+2. Pick the languages (EN / RU / EN + RU) and the format (16:9 / 9:16), choose a style or drop in reference images, tick cards from your Cast & world library or describe the characters and places, and type the topic.
 3. Tell Claude in chat: **"check the tvhead app"**. Claude starts listening to the app (the header shows "Claude is listening"), picks up the brief, and writes the script and a storyboard with transitions.
 4. Review the frames. You can edit the narration right in the cards or send feedback. Then press **Render**.
 5. Watch and download the finished videos in the app.
