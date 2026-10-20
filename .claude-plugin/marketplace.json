@@ -1,7 +1,7 @@
 {
   "name": "tvhead-studio",
   "owner": { "name": "Vladic20" },
-  "description": "Topic → finished narrated doodle motion video (EN/RU) for Claude Code, with a local studio app",
+  "description": "Topic → finished narrated doodle or cartoon motion video (EN/RU) for Claude Code, with a local studio app",
   "plugins": [
     {
       "name": "tvhead",
