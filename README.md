@@ -21,6 +21,8 @@ A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a to
 
 ## The app
 
+The interface speaks **English and Russian** — switch with the RU / EN toggle in the header (it follows your browser language on first start and is independent of the narration language).
+
 ![Storyboard in the app](docs/app-storyboard.jpg)
 
 1. Double-click the **tvhead studio** shortcut on your desktop (create it once with `npm run shortcut` in the studio, or `bootstrap.sh --shortcut`). It starts the app in the background (no console window) and opens http://localhost:4777; clicking it again just reopens the page. The ⏻ button in the header stops it. (`start-app.cmd` / `./start-app.sh` / `npm run app` do the same.)
