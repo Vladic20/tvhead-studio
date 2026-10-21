@@ -6,3 +6,9 @@ plugins/tvhead/skills/tvhead-video/template/episodes/*/build/
 plugins/tvhead/skills/tvhead-video/template/app/thumbs/
 .app.json
 .claude-heartbeat
+plugins/tvhead/skills/tvhead-video/template/films/*/node_modules/
+plugins/tvhead/skills/tvhead-video/template/films/*/kokoro/
+plugins/tvhead/skills/tvhead-video/template/films/*/voice/
+plugins/tvhead/skills/tvhead-video/template/films/*/review/
+plugins/tvhead/skills/tvhead-video/template/films/*/env.json
+plugins/tvhead/skills/tvhead-video/template/films/*/voice.json
