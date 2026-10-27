@@ -19,9 +19,9 @@
       .look-marker #vignette { background: radial-gradient(ellipse 90% 80% at 50% 45%, transparent 62%, rgba(40,40,50,.16) 100%) !important; }
       .look-marker #flicker { display: none; }
       .look-marker #fade { background: #fbfaf6 !important; }
-      .mk-cap { position: absolute; left: 50%; bottom: 190px; transform: translateX(-50%); width: max-content; max-width: 640px; text-align: center;
-        background: rgba(251,250,246,.93); border-radius: 18px; padding: 6px 20px 12px; box-shadow: 0 2px 10px rgba(30,30,40,.10);
-        font: 400 60px/1.02 Hand, Neucha, sans-serif; color: #1f2024; letter-spacing: .3px;
+      .mk-cap { position: absolute; left: 50%; bottom: 176px; transform: translateX(-50%); width: max-content; max-width: 600px; text-align: center;
+        background: rgba(251,250,246,.9); border-radius: 14px; padding: 4px 16px 8px; box-shadow: 0 2px 8px rgba(30,30,40,.08);
+        font: 400 46px/1.04 Hand, Neucha, sans-serif; color: #1f2024; letter-spacing: .3px;
         text-shadow: 0 0 6px #fbfaf6, 0 0 10px #fbfaf6, 0 0 3px #fbfaf6; }
       .mk-cap span { display: inline-block; margin: 0 .1em; }
       .mk-cap .r { color: #e5322d; } .mk-cap .g { color: #1e9e4a; } .mk-cap .b { color: #2470d8; } .mk-cap .o { color: #e07a14; }
@@ -95,6 +95,27 @@
       acc += d; o.push(pts[i]); }
     return o;
   }
+
+  // ── series helpers (use as "obj"): one title / summary / CTA grammar for every episode of a series ──
+  // mkTitle { text, num ("3" → a red "№3" ring), sub }; mkHead { text ("ИТОГ") }; mkResult { lines: [..], top (), c ("g") } boxed
+  // mkRows { rows: [[problem, fix], …], top (), step (72) } problem struck in red → fix in green ✓; mkCta { text, sub, top () }
+  window.MK_OBJ = window.MK_OBJ || {};
+  const fit = (s, size, max) => Math.min(size, max / Math.max(1, [...String(s)].length * .47));
+  Object.assign(MK_OBJ, {
+    mkTitle: p => { const sz = fit(p.text, 44, 560), tw = textW(p.text, sz); const o = [{ k: 't', x: 380, y: 104, s: p.text, size: sz, anchor: 'middle' }, { k: 'u', x: 380 - tw / 2 - 4, y: 118, w: tw + 8, w2: 5 }];
+      if (p.num) o.unshift({ k: 't', x: 50, y: 112, s: '№' + p.num, size: 30, c: 'r', anchor: 'middle' }, { k: 'o', x: 50, y: 102, r: 30, c: 'r', w: 3.5 });
+      if (p.sub) o.push({ k: 't', x: 380, y: 160, s: p.sub, size: 28, anchor: 'middle', c: '#8a8f98' });
+      return o; },
+    mkHead: p => [{ k: 't', x: 360, y: p.top || 150, s: p.text || 'ИТОГ', size: 56, anchor: 'middle' }, { k: 'u', x: 360 - textW(p.text || 'ИТОГ', 56) / 2 - 6, y: (p.top || 150) + 16, w: textW(p.text || 'ИТОГ', 56) + 12, w2: 5 }],
+    mkResult: p => { const L = p.lines || [], y0 = p.top || 250, sz = Math.min(...L.map(s => fit(s, 50, 580))), h = L.length * sz * 1.25 + 30;
+      return [...L.map((s, i) => ({ k: 't', x: 360, y: y0 + 18 + (i + .8) * sz * 1.25, s, size: sz, anchor: 'middle', c: p.c || 'g' })), { k: 'r', x: 60, y: y0, w: 600, h, c: p.c || 'g', w2: 5 }]; },
+    mkRows: p => { const y0 = p.top || 480, st = p.step || 78; return (p.rows || []).flatMap(([a, b], i) => {
+      const y = y0 + i * st, sa = fit(a, 36, 230), wa = textW(a, sa), x1 = 60 + wa + 16, sb = fit(b, 36, 640 - x1 - 70 - 50), wb = textW(b, sb);
+      return [{ k: 't', x: 60, y, s: a, size: sa, c: 'r' }, { k: 'l', p: [[56, y - sa * .32], [64 + wa, y - sa * .32]], c: 'r', w: 4 },
+        { k: 'a', from: [x1, y - 12], to: [x1 + 50, y - 12], bend: 0, head: 13 }, { k: 't', x: x1 + 64, y, s: b, size: sb, c: 'g' }, { k: 'v', x: Math.min(670, x1 + 64 + wb + 26), y: y - 14, s: 24, c: 'g' }]; }); },
+    mkCta: p => { const y = p.top || 840; return [{ k: 't', x: 360, y, s: p.text || 'Что нарисовать дальше?', size: fit(p.text || 'Что нарисовать дальше?', 50, 620), anchor: 'middle' },
+      { k: 'a', from: [360, y + 26], to: [360, y + 110], bend: .15 }, { k: 't', x: 360, y: y + 150, s: p.sub || 'пишите идеи в комментариях', size: 36, anchor: 'middle', c: 'b' }]; },
+  });
 
   // ── schedule: each prop's strokes laid out in time from its t0 (cached per item) ──
   window.MK_OBJ = window.MK_OBJ || {};
