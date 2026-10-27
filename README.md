@@ -13,6 +13,7 @@ The promo video above was made with the skill itself: `episodes/promo/story.json
 
 ## Features
 
+- **Two engineering formats for vertical shorts.** `underground`: a flat cutaway of a hidden workshop (under a garage, in a basement or a dacha attic) that gets upgraded line by line — HUD counter, upgrade chips, stamps, two-tone captions and a summary card. `marker`: a hand with felt-tip markers draws the object, strikes problems in red, draws fixes in green and blue with real arithmetic next to them, then flips to a summary page — with marker squeaks synced to every stroke.
 - **Classic stickman styles + a director.** Five stick-figure looks adapted from [stickman-video-director](https://github.com/kaomei/stickman-video-director) (MIT): minimalist lines on white or black, red-beanie Zeke in a tech studio or cinematic places, prehistoric dark comedy, cozy everyday stories, and a historical cartoon with Edo, Egyptian and Roman sets and costumes. Every story also gets a **director's proposal** (5-stage "heartbeat" storyboard with checks) and an **AI-video prompt package**: standalone ~10-second prompts for Gemini Omni Flash, Veo or Kling with frozen style, cast and voice locks.
 - **Eight looks, one story API.** Doodle, cartoon, **3D desk** (UI lying on a desk under a moving 3D camera, a clay cube mascot hopping over a post, a timeline or a beat maker), **neon noir** (painted scenes + clean infographic cards), **Dota-like** dark fantasy, **Roblox-like** brick game, **8-bit** and **comic**. Each brings its own places, characters, HUD props, caption style and music. Set `"look": "cartoon"` (or pick **Cartoon** in the app) for the warm garage cartoon. It comes with its own places (`garage`, `desk`, `blackout` with a spotlight), a `screen` prop that plays a live Claude chat, the studio app, a terminal or a doodle video, name `badge`s and outlined kinetic type.
 - **Real 3D from After Effects.** With After Effects installed, a scene can have a 3D background built and rendered by AE: extruded titles, a 3D clay mascot, cards flying past the camera, ring tunnels — lights, shadows and camera moves included, with characters and captions still drawn on top. Claude can also drive AE directly through the After Effects MCP server.
@@ -83,7 +84,7 @@ node make.mjs demo --preview         # fast 720p draft
 node make.mjs demo                   # final 1080p for every language
 node make.mjs demo --format 9:16     # the same story as a vertical 1080×1920 video
 node make.mjs promo                  # the cartoon-style promo (9:16, EN + RU)
-node make.mjs look-dota              # 15-second test of a look (look-desk3d, look-noir, look-blocks, look-pixel, look-comic, look-stick, look-beanie, look-prehistoric, look-cozy, look-history)
+node make.mjs look-dota              # 15-second test of a look (look-desk3d, look-noir, look-blocks, look-pixel, look-comic, look-stick, look-beanie, look-prehistoric, look-cozy, look-history, look-underground, look-marker)
 node make.mjs demo --director        # only the director's proposal + AI-video prompts (build/proposal.md, build/<lang>/prompts.md)
 node voices.mjs deep calm --lang en  # search Fish voices (no key needed)
 ```
