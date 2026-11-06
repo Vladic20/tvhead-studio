@@ -56,3 +56,19 @@ export function attachToJob(jobId, ids = []) {
   }
   return out;
 }
+
+// built-in cards (app/seed/seed.json): our own heroes, places, styles and ideas — added once, then they are ordinary cards
+export function seedLibrary() {
+  const flag = path.join(LIB_DIR, '.seeded-v1'), seed = readJson(path.join(STUDIO, 'app', 'seed', 'seed.json'));
+  if (!seed || existsSync(flag)) return 0;
+  mkdirSync(path.join(LIB_DIR, 'img'), { recursive: true });
+  const have = new Set(listLibrary().map(it => it.seed).filter(Boolean)), add = [];
+  for (const s of seed.items) {
+    if (have.has(s.key)) continue;
+    const src = path.join(STUDIO, 'app', 'seed', s.img), rel = `library/img/seed-${s.key}.jpg`;
+    if (existsSync(src)) copyFileSync(src, path.join(STUDIO, rel));
+    add.push({ id: `${s.kind}-seed-${s.key}`, kind: s.kind, title: s.title, notes: s.notes, images: existsSync(src) ? [rel] : [], seed: s.key, builtin: true, createdAt: new Date().toISOString() });
+  }
+  save([...listLibrary(), ...add]); writeFileSync(flag, new Date().toISOString());
+  return add.length;
+}

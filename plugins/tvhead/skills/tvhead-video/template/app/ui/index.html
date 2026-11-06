@@ -11,6 +11,7 @@
   <nav class="tabs" data-i18n-aria="nav.aria">
     <button type="button" data-view="studio" aria-current="page" data-i18n="tab.studio">Studio</button>
     <button type="button" data-view="library"><span data-i18n="tab.library">Cast &amp; world</span> <span class="count" id="libCount"></span></button>
+    <button type="button" data-view="media"><span data-i18n="tab.media">Videos</span> <span class="count" id="mediaCount"></span></button>
   </nav>
   <div class="pills">
     <span class="pill" id="pillClaude" data-i18n-title="pill.claude.title">Claude: …</span>
@@ -49,8 +50,8 @@
         <input type="range" name="duration" min="30" max="180" step="15" value="60"></label>
 
       <div class="field"><span data-i18n="brief.look">Look</span>
-        <div class="looks" id="looks" role="radiogroup" data-i18n-aria="brief.look.aria">
-        </div></div>
+        <div id="looks" role="radiogroup" data-i18n-aria="brief.look.aria">
+        </div><small class="hint" id="lookHint"></small></div>
 
       <div class="field"><span data-i18n="brief.music">Music</span>
         <select id="musicSel" class="sel" data-i18n-aria="brief.music.aria"></select>
@@ -63,7 +64,7 @@
           <option value="payoff" data-i18n="arc.payoff">Short story: setup → escalation → payoff</option>
         </select></div>
 
-      <div class="field"><span data-i18n="brief.style">Style and reference</span>
+      <div class="field" id="styleField"><span data-i18n="brief.style">Style and reference</span>
         <div class="themes" id="themes" role="radiogroup" data-i18n-aria="brief.style.aria"></div>
         <div class="drop" id="drop" tabindex="0" role="button" data-i18n-aria="drop.aria">
           <input type="file" id="refInput" accept="image/*" multiple hidden>
@@ -84,10 +85,11 @@
         <div class="voices" id="voices"></div>
         <label class="check"><input type="checkbox" name="captions"> <span data-i18n="captions"></span></label>
         <label class="check"><input type="checkbox" name="autoRender"> <span data-i18n="autorender"></span></label>
-        <div class="field"><span data-i18n="engine">Who writes the storyboard</span>
-          <label class="check"><input type="radio" name="engine" value="session" checked> <span data-i18n="engine.session"></span></label>
-          <label class="check" id="cliOpt"><input type="radio" name="engine" value="cli"> <span data-i18n="engine.cli"></span></label></div>
       </details>
+
+      <div class="field engine"><span data-i18n="engine">Who makes the video</span>
+        <label class="check" id="cliOpt"><input type="radio" name="engine" value="cli" checked> <span data-i18n="engine.cli"></span></label>
+        <label class="check"><input type="radio" name="engine" value="session"> <span data-i18n="engine.session"></span></label></div>
 
       <label class="field"><span data-i18n="notes">Notes</span>
         <textarea name="notes" rows="2" data-i18n-ph="notes.ph"></textarea></label>
@@ -157,6 +159,31 @@
     </details>
   </section>
 </main>
+
+<main class="layout one" id="mediaView" hidden>
+  <section class="work">
+    <div class="libhead mediahead">
+      <input id="mediaQ" type="search" data-i18n-ph="media.ph" data-i18n-aria="media.ph">
+      <div class="seg small" role="radiogroup" id="mediaFmt" data-i18n-aria="media.fmt">
+        <button type="button" role="radio" data-mf="all" aria-checked="true" data-i18n="f.all">All</button>
+        <button type="button" role="radio" data-mf="v" aria-checked="false">▯ 9:16</button>
+        <button type="button" role="radio" data-mf="h" aria-checked="false">▭ 16:9</button>
+      </div>
+      <small class="hint" id="mediaRoot"></small>
+    </div>
+    <div id="mediaGrid"></div>
+  </section>
+</main>
+
+<dialog id="playDlg">
+  <div class="dlg play">
+    <video id="playVid" controls playsinline></video>
+    <div class="row"><b id="playName"></b><span class="meta" id="playMeta"></span>
+      <a id="playDl" class="btn" download>mp4</a><a id="playShare" class="btn" download data-i18n="media.share">phone copy</a>
+      <button type="button" class="btn" id="playLike" data-i18n="media.like">Make a similar one</button>
+      <button type="button" class="btn" id="playClose" data-i18n="vdlg.close">Close</button></div>
+  </div>
+</dialog>
 
 <dialog id="voiceDlg">
   <form method="dialog" class="dlg">

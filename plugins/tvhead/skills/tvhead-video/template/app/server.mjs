@@ -11,10 +11,11 @@ import { STUDIO, EPISODES, APP_STATE, getJob, saveJob, setStatus, listJobs, crea
 import { THEMES, LOOKS, localize, storyLanguages, resolveFormat } from '../lib/story.mjs';
 import { MUSIC_PRESETS } from '../lib/music.mjs';
 import { DEFAULT_VOICES, provider } from '../lib/voice.mjs';
-import { listLibrary, addLibraryItem, updateLibraryItem, deleteLibraryItem, attachToJob } from './library.mjs';
+import { listLibrary, addLibraryItem, updateLibraryItem, deleteLibraryItem, attachToJob, seedLibrary } from './library.mjs';
+import { MOTION_STYLES, isMotionLook, MEDIA_ROOT, listMedia, mediaPath, mediaThumb, warmThumbs, motionBoard, startMotionRender, skillDir } from './motion.mjs';
 import { PARTS, PARTS_EN } from '../lib/parts.mjs';
 
-const PORT = +(process.env.TVHEAD_PORT || 4777), VERSION = '2.11.0';
+const PORT = +(process.env.TVHEAD_PORT || 4777), VERSION = '2.14.0';
 // .env (same loader as make.mjs) so the key status is accurate
 const envFile = path.join(STUDIO, '.env');
 if (existsSync(envFile)) for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
@@ -43,6 +44,14 @@ function serveFile(req, res, rel) {
   }
   res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' });
   createReadStream(file).pipe(res);
+}
+function serveAbs(req, res, file) {   // media from MEDIA_ROOT, only via ids from listMedia()
+  if (!file || !existsSync(file)) return send(res, 404, { error: 'not found' });
+  const size = statSync(file).size, type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+  const range = req.headers.range && req.headers.range.match(/bytes=(\d*)-(\d*)/);
+  if (range) { const a = range[1] ? +range[1] : 0, b = range[2] ? Math.min(+range[2], size - 1) : size - 1;
+    res.writeHead(206, { 'Content-Type': type, 'Content-Range': `bytes ${a}-${b}/${size}`, 'Accept-Ranges': 'bytes', 'Content-Length': b - a + 1 }); return createReadStream(file, { start: a, end: b }).pipe(res); }
+  res.writeHead(200, { 'Content-Type': type, 'Content-Length': size, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' }); createReadStream(file).pipe(res);
 }
 function body(req) {
   return new Promise((resolve, reject) => {
@@ -125,6 +134,8 @@ function restill(id, next = 'storyboard') {
 // ─── autonomous mode: the app asks Claude Code (headless) to write the storyboard ───────────────
 function startClaudeCli(id, feedback) {
   if (!HAS_CLAUDE_CLI || running.has(id)) return false;
+  const brief = readJson(path.join(jobDir(id), 'brief.json')) || {};
+  if (isMotionLook(brief.look)) return startClaudeMotion(id, brief, feedback);
   const prompt = `Use the tvhead-video skill. You are processing a job from the tvhead studio app in ${STUDIO}.
 Job id: ${id}. ${feedback ? `The user sent storyboard feedback: "${feedback}". Revise episodes/${id}/story.json accordingly.` : `Read episodes/${id}/brief.json (and any images in episodes/${id}/refs/) and write episodes/${id}/story.json.`}
 Follow SKILL.md section "App jobs": claim with \`node app/bridge.mjs claim ${id}\`, design the cast and world (story "characters" + scene "set", see references/cast-and-world.md; use the brief's castIdeas / worldIdeas / libraryItems images, invent the rest by meaning), write the story (every scene gets a "note"; say as {"en","ru"} for each language in the brief; copy the brief's "format", "look" and "arc" (unless "auto") into story.json, and "music" unless it is "auto" ("none" → "music": false)), then run \`node app/bridge.mjs storyboard ${id}\` and look at the sheet it prints; fix obvious problems once. Do not render the final video — the app does that after the user approves.`;
@@ -135,8 +146,56 @@ Follow SKILL.md section "App jobs": claim with \`node app/bridge.mjs claim ${id}
   p.stdin.end(prompt);
   p.stdout.pipe(log); p.stderr.pipe(log);
   setStatus(id, 'storyboarding', 'Claude CLI пишет раскадровку');
-  p.on('exit', code => { running.delete(id); const j = getJob(id); if (j && j.status === 'storyboarding') setStatus(id, 'error', 'Claude CLI завершился без раскадровки', { error: `exit ${code}, see claude.log` }); });
+  p.on('exit', code => { running.delete(id); cliExit(id, code); });
   return true;
+}
+
+function startClaudeMotion(id, brief, feedback) {
+  const st = MOTION_STYLES[brief.look], ms = skillDir('motion-studio'), proj = path.join(MEDIA_ROOT, id);
+  if (!ms) { setStatus(id, 'error', 'Скилл motion-studio не найден', { error: 'install the motion-studio skill (tvhead plugin 2.14+)' }); return false; }
+  const extra = st.skills.filter(x => x !== 'motion-studio').map(x => skillDir(x)).filter(Boolean);
+  const steps = feedback
+    ? `The user sent storyboard feedback: "${feedback}". The project already exists in ${proj}: apply the feedback there (script, scenes, re-voice changed lines), then continue from step 4.`
+    : `1. node app/bridge.mjs claim ${id}
+2. bash "${ms}/scripts/new-project.sh" "${proj}" ${st.style}
+3. In ${proj}: write tools/script.mjs for this topic (keep the style's scene ids and structure; hook in the first line; CTA at the end; numbers only from code or real data), npm run voice, npm run asr (fix pronunciation in say and re-voice if needed), npm run music, adapt the scene components so every on-screen text matches the new script (keep text in the safe zone).`;
+  const prompt = `You are processing a job from the tvhead studio app (${STUDIO}). Use the skill(s) ${st.skills.join(', ')}: read ${ms}/SKILL.md${extra.map(d => ' and ' + d + '/SKILL.md').join('')}. Work without asking questions.
+Job id: ${id}. Brief: ${path.join(jobDir(id), 'brief.json')} — topic, languages (narrate in the first one), duration in seconds, notes, castIdeas, worldIdeas, libraryItems (their images are in ${path.join(jobDir(id), 'refs')}: Read every image). Style: "${st.style}" — ${st.label}.
+${steps}
+4. npx tsc --noEmit -p . ; npm run stills -- <one frame per scene>; Read out/stills/sheet.jpg and fix obvious problems once.
+5. Write ${path.join(jobDir(id), 'motion.json')} as {"title": "...", "scenes": [{"id": "<scene id>", "note": "one line: what is on screen"}]} (keep other keys if the file exists), then run: node app/bridge.mjs motion-ready ${id} "${proj}"
+Do not run npm run render or deliver: the app does that after the user approves.`;
+  const log = createWriteStream(path.join(jobDir(id), 'claude.log'), { flags: 'a' });
+  mkdirSync(MEDIA_ROOT, { recursive: true });
+  const dirs = [MEDIA_ROOT, ms, ...extra].flatMap(d => ['--add-dir', d]);
+  const tools = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash(node:*)', 'Bash(npm:*)', 'Bash(npx:*)', 'Bash(bash:*)', 'Bash(ffmpeg:*)', 'Bash(ffprobe:*)', 'Bash(cp:*)', 'Bash(ls:*)', 'Bash(mkdir:*)', 'Bash(cd:*)'];
+  const p = spawn('claude', ['-p', '--permission-mode', 'acceptEdits', ...dirs, '--allowedTools', ...tools], { cwd: STUDIO, shell: process.platform === 'win32', env: { ...process.env } });
+  running.set(id, p);
+  p.stdin.end(prompt); p.stdout.pipe(log); p.stderr.pipe(log);
+  setStatus(id, 'storyboarding', feedback ? 'Claude вносит правки' : 'Claude пишет сценарий, озвучивает и собирает кадры');
+  p.on('exit', code => { running.delete(id); cliExit(id, code); });
+  return true;
+}
+
+// the CLI stopped: not logged in → give the job to the chat session (bridge wait) instead of failing it
+let CLI_LOGIN = null;   // null = unknown, true/false from `claude auth status` (re-checked every minute) or a failed run
+function checkCliLogin() {
+  if (!HAS_CLAUDE_CLI) return;
+  const p = spawn('claude', ['auth', 'status'], { shell: process.platform === 'win32', windowsHide: true }); let out = '';
+  p.stdout.on('data', d => out += d); p.on('exit', () => { try { CLI_LOGIN = !!JSON.parse(out).loggedIn; } catch {} });
+  p.on('error', () => {});
+}
+setInterval(checkCliLogin, 60000);
+function cliExit(id, code) {
+  const j = getJob(id); if (!j || j.status !== 'storyboarding') return;
+  let tail = ''; try { tail = readFileSync(path.join(jobDir(id), 'claude.log'), 'utf8').slice(-4000); } catch {}
+  if (/not logged in|please run \/login|invalid api key|authentication/i.test(tail)) {
+    CLI_LOGIN = false;
+    const b = readJson(path.join(jobDir(id), 'brief.json')); if (b) { b.engine = 'session'; writeJson(path.join(jobDir(id), 'brief.json'), b); }
+    return setStatus(id, 'brief', 'Claude CLI не вошёл в аккаунт — бриф ждёт Claude в чате', { brief: { ...j.brief, engine: 'session' }, notice: 'cli_login' });
+  }
+  CLI_LOGIN = true;
+  setStatus(id, 'error', 'Claude CLI завершился без раскадровки', { error: `exit ${code}, see claude.log` });
 }
 
 // ─── theme thumbnails (rendered once with the real engine) ─────────────────────────────────────
@@ -175,10 +234,13 @@ const server = http.createServer(async (req, res) => {
     if (M === 'GET' && p.startsWith('/files/')) return serveFile(req, res, p.slice(7));
     if (M === 'GET' && p === '/api/status') {
       const jobs = listJobs();
-      return send(res, 200, { ok: true, version: VERSION, studio: STUDIO, tts: provider() || null, claude: { watching: claudeWatching(), cli: HAS_CLAUDE_CLI },
+      return send(res, 200, { ok: true, version: VERSION, studio: STUDIO, tts: provider() || null, claude: { watching: claudeWatching(), cli: HAS_CLAUDE_CLI, cliLogin: CLI_LOGIN },
         defaults: { voices: DEFAULT_VOICES }, counts: Object.fromEntries(['brief', 'storyboarding', 'storyboard', 'revise', 'rendering', 'done', 'error'].map(s => [s, jobs.filter(j => j.status === s).length])) });
     }
-    if (M === 'GET' && p === '/api/looks') return send(res, 200, { looks: Object.entries(LOOKS).map(([id, l]) => ({ id, label: l.label, theme: l.theme, music: l.music })), music: Object.keys(MUSIC_PRESETS) });
+    if (M === 'GET' && p === '/api/looks') return send(res, 200, { looks: [...Object.entries(LOOKS).map(([id, l]) => ({ id, label: l.label, theme: l.theme, music: l.music, family: 'tvhead' })), ...Object.entries(MOTION_STYLES).map(([id, l]) => ({ id, label: l.label, theme: null, music: l.music, family: 'motion' }))], music: Object.keys(MUSIC_PRESETS), media: MEDIA_ROOT });
+    if (M === 'GET' && p === '/api/media') return send(res, 200, { root: MEDIA_ROOT, items: listMedia() });
+    const mm = p.match(/^\/(?:api\/)?media\/([0-9a-f]{12})(\/thumb)?$/);
+    if (M === 'GET' && mm) return mm[2] ? serveAbs(req, res, await mediaThumb(mm[1])) : serveAbs(req, res, mediaPath(mm[1]));
     if (M === 'GET' && p === '/api/themes') return send(res, 200, Object.entries(THEMES).map(([id, t]) => ({ id, label: t.label, paper: t.paper, ink: t.ink, accent: t.accent,
       thumb: existsSync(path.join(STUDIO, 'app', 'thumbs', `${id}.png`)) ? `/files/app/thumbs/${id}.png` : null })));
     if (M === 'GET' && p === '/api/voices') return send(res, 200, await voices(url.searchParams.get('lang') || 'en', url.searchParams.get('q')));
@@ -193,25 +255,27 @@ const server = http.createServer(async (req, res) => {
     if (M === 'POST' && p === '/api/jobs') {
       const b = await body(req);
       if (!String(b.topic || '').trim()) return send(res, 400, { error: 'A topic is required', code: 'topic_required' });
-      const langs = (b.languages || ['en']).filter(l => ['en', 'ru'].includes(l));
-      const brief = { topic: String(b.topic).trim().slice(0, 2000), languages: langs.length ? langs : ['en'], format: b.format === '9:16' ? '9:16' : '16:9', duration: Math.min(300, Math.max(15, +b.duration || 60)),
+      let langs = (b.languages || ['en']).filter(l => ['en', 'ru'].includes(l));
+      if (isMotionLook(b.look)) langs = langs.slice(0, 1);   // motion reels are voiced in one language
+      const brief = { topic: String(b.topic).trim().slice(0, 2000), languages: langs.length ? langs : ['en'], format: b.format === '9:16' || isMotionLook(b.look) ? '9:16' : '16:9', duration: Math.min(300, Math.max(15, +b.duration || 60)),
         theme: THEMES[b.theme] ? b.theme : b.theme === 'reference' ? 'reference' : 'paper', voices: b.voices || {}, notes: String(b.notes || '').slice(0, 4000),
-        arc: ['heartbeat', 'payoff'].includes(b.arc) ? b.arc : 'auto', look: LOOKS[b.look] ? b.look : 'doodle', music: MUSIC_PRESETS[b.music] || b.music === 'none' ? b.music : 'auto',
-        captions: !!b.captions, autoRender: !!b.autoRender, engine: b.engine === 'cli' ? 'cli' : 'session',
+        arc: ['heartbeat', 'payoff'].includes(b.arc) ? b.arc : 'auto', look: LOOKS[b.look] || isMotionLook(b.look) ? b.look : 'doodle', family: isMotionLook(b.look) ? 'motion' : 'tvhead', music: MUSIC_PRESETS[b.music] || b.music === 'none' ? b.music : 'auto',
+        captions: !!b.captions, autoRender: !!b.autoRender, engine: b.engine === 'session' || !HAS_CLAUDE_CLI ? 'session' : 'cli',
         castIdeas: String(b.castIdeas || '').slice(0, 3000), worldIdeas: String(b.worldIdeas || '').slice(0, 3000), invent: b.invent !== false, uiLang: b.uiLang === 'ru' ? 'ru' : 'en' };
       const job = createJob(brief, Array.isArray(b.refs) ? b.refs.slice(0, 8) : []);
       if (Array.isArray(b.library) && b.library.length) {   // chosen library cards → copied into the job, snapshot in the brief
         const items = attachToJob(job.id, b.library.slice(0, 12)), file = path.join(jobDir(job.id), 'brief.json'), br = readJson(file);
         br.libraryItems = items; writeJson(file, br); const j = getJob(job.id); j.brief = br; saveJob(j);
       }
-      if (brief.engine === 'cli') startClaudeCli(job.id);
+      if (brief.engine === 'cli' && CLI_LOGIN === false) { const bf = path.join(jobDir(job.id), 'brief.json'), br = readJson(bf); br.engine = 'session'; writeJson(bf, br); const jj = getJob(job.id); jj.brief = br; jj.notice = 'cli_login'; saveJob(jj); }
+      else if (brief.engine === 'cli') startClaudeCli(job.id);
       return send(res, 200, getJob(job.id));
     }
     if (m) {
       const [, id, action] = m, job = getJob(id);
       if (!job) return send(res, 404, { error: 'No such job', code: 'job_not_found' });
-      if (M === 'GET' && !action) return send(res, 200, { ...job, storyboard: storyboard(id, ['en', 'ru'].includes(url.searchParams.get('ui')) ? url.searchParams.get('ui') : null), running: running.has(id) });
-      if (M === 'POST' && action === 'approve') return send(res, 200, startRender(id));
+      if (M === 'GET' && !action) return send(res, 200, { ...job, storyboard: job.brief?.family === 'motion' ? motionBoard(id) : storyboard(id, ['en', 'ru'].includes(url.searchParams.get('ui')) ? url.searchParams.get('ui') : null), running: running.has(id) });
+      if (M === 'POST' && action === 'approve') return send(res, 200, job.brief?.family === 'motion' ? startMotionRender(id, running) : startRender(id));
       if (M === 'POST' && action === 'feedback') {
         const b = await body(req), text = String(b.text || '').trim();
         if (!text) return send(res, 400, { error: 'The notes are empty', code: 'empty_feedback' });
@@ -241,6 +305,10 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`tvhead studio → ${url}\n  TTS: ${provider() || 'no key (narration will be silent)'} · Claude CLI: ${HAS_CLAUDE_CLI ? 'yes' : 'no'}\n  Claude session: run "node app/bridge.mjs wait" (the skill does this) — the header shows when Claude is listening.`);
   if (process.argv.includes('--open')) spawn(process.platform === 'win32' ? 'cmd' : process.platform === 'darwin' ? 'open' : 'xdg-open', process.platform === 'win32' ? ['/c', 'start', '', url] : [url], { stdio: 'ignore', detached: true }).unref();
   ensureThumbs().catch(e => console.warn('thumbs:', e.message));
+  checkCliLogin();
+  try { const n = seedLibrary(); if (n) console.log(`  library: +${n} built-in cards`); } catch (e) { console.warn('seed:', e.message); }
+  console.log(`  videos: ${MEDIA_ROOT}`);
+  setTimeout(() => { try { warmThumbs(); } catch (e) { console.warn('thumbs:', e.message); } }, 1500);
 });
 const bye = () => { try { if (readJson(APP_STATE)?.pid === process.pid) unlinkSync(APP_STATE); } catch {} process.exit(0); };
 process.on('SIGINT', bye); process.on('SIGTERM', bye);

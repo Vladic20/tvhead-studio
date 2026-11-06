@@ -9,11 +9,14 @@
 //                                              (or straight to render when the brief has autoRender)
 //   node app/bridge.mjs render <id>            start the final render (through the app if it runs, else directly)
 //   node app/bridge.mjs fail <id> "message"    report a problem to the user
+//   node app/bridge.mjs motion-ready <id> <project>   motion-studio job: copy out/stills/sheet.jpg + timeline into the job,
+//                                              hand the storyboard to the user (or render right away with autoRender)
 import { spawnSync, spawn } from 'node:child_process';
 import { existsSync, writeFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { STUDIO, HEARTBEAT, getJob, setStatus, listJobs, appState, claudeWatching, jobDir, readJson } from './jobs.mjs';
 import { storyLanguages } from '../lib/story.mjs';
+import { MOTION_STYLES, MEDIA_ROOT, skillDir, motionReady } from './motion.mjs';
 
 const [cmd, id, ...rest] = process.argv.slice(2);
 const out = o => console.log(JSON.stringify(o, null, 2));
@@ -33,6 +36,9 @@ function details(j) {
         library: (b.libraryItems || []).map(it => ({ ...it, images: it.images.map(f => path.join(dir, f)) })),
         how: 'design story "characters" and scene "set"/"weather" from these (references/cast-and-world.md); invent what is missing by the meaning of the topic' };
     })(),
+    motion: MOTION_STYLES[j.brief?.look] ? { style: MOTION_STYLES[j.brief.look].style, skills: MOTION_STYLES[j.brief.look].skills, project: path.join(MEDIA_ROOT, j.id),
+      skillDir: skillDir('motion-studio'),
+      how: `motion-studio job: claim → bash "<motion-studio>/scripts/new-project.sh" "${path.join(MEDIA_ROOT, j.id)}" ${MOTION_STYLES[j.brief.look].style} → script, voice, asr, music, scenes, stills → write ${path.join(dir, 'motion.json')} {title, scenes:[{id, note}]} → node app/bridge.mjs motion-ready ${j.id} "${path.join(MEDIA_ROOT, j.id)}". Do not render: the app renders after approval.` } : null,
     story: existsSync(path.join(dir, 'story.json')) ? path.join(dir, 'story.json') : null,
     next: j.status === 'revise' ? `apply the latest feedback to story.json, then: node app/bridge.mjs storyboard ${j.id}` : `node app/bridge.mjs claim ${j.id}  → write ${path.join(dir, 'story.json')} → node app/bridge.mjs storyboard ${j.id}` };
 }
@@ -94,12 +100,26 @@ switch (cmd) {
     const j = need();
     const viaApp = await api(`/api/jobs/${j.id}/approve`, 'POST');
     if (viaApp) { console.log(`rendering in the app: ${appState().url}`); break; }
+    if (j.brief?.family === 'motion') die('motion jobs render through the app: start it (node app/server.mjs --open) and press Render');
     setStatus(j.id, 'rendering', 'Рендер запущен из Claude');
     const r = spawnSync(process.execPath, [path.join(STUDIO, 'make.mjs'), j.id], { cwd: STUDIO, stdio: 'inherit' });
     setStatus(j.id, r.status === 0 ? 'done' : 'error', r.status === 0 ? 'Видео готово' : 'Рендер упал');
     break;
   }
+  case 'motion-ready': {
+    const j = need();
+    let m; try { m = motionReady(j.id, rest[0]); } catch (e) { setStatus(j.id, 'error', 'Раскадровка не собралась', { error: e.message }); die(e.message); }
+    if (j.brief?.autoRender) {
+      const viaApp = await api(`/api/jobs/${j.id}/approve`, 'POST');
+      console.log(viaApp ? 'storyboard ready, autoRender → rendering in the app' : 'storyboard ready; start the app to render (autoRender needs the app)');
+      if (!viaApp) setStatus(j.id, 'storyboard', 'Раскадровка готова — проверь и нажми «Рендерить»');
+    } else {
+      setStatus(j.id, 'storyboard', 'Раскадровка готова — проверь и нажми «Рендерить»');
+      console.log(`storyboard ready for review in the app: ${m.scenes.length} scenes, ${m.duration} s, project ${m.project}`);
+    }
+    break;
+  }
   case 'fail': { const j = need(); setStatus(j.id, 'error', rest.join(' ') || 'Ошибка', { error: rest.join(' ') }); break; }
   default: console.log(readFileSync0());
 }
-function readFileSync0() { return `usage: node app/bridge.mjs status | wait [--timeout s] | show <id> | claim <id> | storyboard <id> | render <id> | fail <id> "msg"`; }
+function readFileSync0() { return `usage: node app/bridge.mjs status | wait [--timeout s] | show <id> | claim <id> | storyboard <id> | motion-ready <id> <project> | render <id> | fail <id> "msg"`; }
