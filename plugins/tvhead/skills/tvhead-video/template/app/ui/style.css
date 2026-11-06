@@ -200,3 +200,29 @@ dialog::backdrop { background: rgba(20,20,20,.35); }
 .sel { width: 100%; font: 18px Hand, system-ui; padding: 6px 10px; border: var(--line) solid var(--ink); border-radius: 10px; background: #fff; }
 
 .director { margin: -4px 0 10px; font-size: 15px; } .director a { color: inherit; }
+
+/* 2.14: look groups, visible engine choice, motion storyboard, videos library */
+.lookgroup { font: 19px Hand, system-ui; margin: 10px 2px 6px; }
+.look { position: relative; }
+.look .badge { position: absolute; top: 10px; right: 10px; background: var(--ink); color: #fff; font: 12px system-ui; padding: 1px 6px; border-radius: 6px; }
+.field.engine { border: var(--line) dashed var(--ink); border-radius: 12px; padding: 8px 12px; background: #fff; }
+.sheet img { width: 100%; border: 2px solid var(--ink); border-radius: 10px; display: block; margin: 10px 0; }
+.mscenes { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.mscenes li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; background: #fff; border: 2px solid var(--ink); border-radius: 10px; padding: 8px 10px; }
+.mscenes .num { font: 16px Hand, system-ui; color: #6b7175; }
+.mscenes .note { font-size: 13px; color: #6b7175; margin-bottom: 2px; }
+.layout.one { grid-template-columns: 1fr; }
+.mediahead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.mediahead input[type=search] { flex: 1 1 260px; font: 16px system-ui; padding: 8px 12px; border: var(--line) solid var(--ink); border-radius: 10px; }
+.mgroup { font: 22px Hand, system-ui; margin: 18px 0 8px; } .mgroup small { font: 14px system-ui; color: #6b7175; }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.mcard { position: relative; display: grid; gap: 3px; text-align: left; padding: 6px 6px 8px; border: var(--line) solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; color: var(--ink); }
+.mcard img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 7px; background: #222; display: block; }
+.mcard.tall img { aspect-ratio: 9/16; }
+.mcard .dur { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,.72); color: #fff; font: 12px system-ui; padding: 1px 6px; border-radius: 6px; }
+.mcard b { font: 15px system-ui; font-weight: 700; word-break: break-word; } .mcard small { font-size: 12px; color: #6b7175; }
+dialog#playDlg { max-width: min(96vw, 1100px); border: var(--line) solid var(--ink); border-radius: 14px; padding: 0; }
+.dlg.play { padding: 12px; display: grid; gap: 10px; }
+#playVid { width: 100%; max-height: 78vh; background: #000; border-radius: 8px; } #playVid.tall { width: auto; height: 74vh; margin: 0 auto; display: block; }
+.dlg.play .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .dlg.play .row b { margin-right: auto; }
+.notice { border: var(--line) solid var(--accent); background: #fff6ee; border-radius: 12px; padding: 10px 14px; margin: 10px 0; line-height: 1.4; } .notice code { background: #f1ece6; padding: 0 5px; border-radius: 4px; }

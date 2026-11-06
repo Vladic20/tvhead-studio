@@ -71,7 +71,11 @@ The interface speaks **English and Russian** — switch with the RU / EN toggle 
 4. Review the frames. You can edit the narration right in the cards or send feedback. Then press **Render**.
 5. Watch and download the finished videos in the app.
 
-You can also skip the chat: the "Claude Code CLI in the background" mode runs `claude -p` for you.
+**Claude works on its own by default (2.15).** Pick a look, describe or tick characters, send the idea and wait: the app runs Claude Code in the background (`claude -p` with the skills), the storyboard appears in the job, you press **Render** and the video shows up in the job and in the **Videos** tab. "Claude in my chat" is still there if you want to steer by hand.
+
+- **Two families of looks.** *tvhead* (the 15 character looks) and *motion-studio* 9:16 reels: motion reel, Clawd's tower, film set, anime opening, shot on a phone, documentary montage, 3D from Blender. A motion job builds a Remotion project in `~/Desktop/MOTION/<id>` (`TVHEAD_MEDIA` changes the folder), the storyboard is its contact sheet plus the voiced lines, and Render runs `npm run render` + `deliver` (−14 LUFS master and a phone copy).
+- **Videos tab.** Every mp4 in the MOTION folder and in the studio's `out/`, grouped by folder, with thumbnails, a player, the phone copy and "make a similar one" (opens the brief with the matching look).
+- **Built-in cast & world.** The library starts with our own cards (clay, voxel and anime Clawd, the helper robot, the bug; the tower, film set, anime hill, night desk, chart terminal, archive photos, notebook, cutaway, marker sheet; cozy 3D / anime / phone-shot / kinetic styles; listicle, meta-reel, "what if you invested", comment-word CTA ideas), and the "what Claude builds from" catalog lists the motion-studio mascots, accessories, worlds and effects.
 
 ![Finished videos in the app](docs/app-done.jpg)
 

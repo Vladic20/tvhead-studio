@@ -33,11 +33,14 @@ async function refreshStatus() {
     const s = await api('/api/status'); state.status = s; state.defaults = s.defaults || {};
     const pc = $('#pillClaude'), pt = $('#pillTts');
     pc.className = 'pill ' + (s.claude.watching ? 'on' : 'off');
-    pc.textContent = t(s.claude.watching ? 'pill.claude.on' : 'pill.claude.off');
+    pc.textContent = t(s.claude.watching ? 'pill.claude.on' : s.claude.cli && s.claude.cliLogin === true ? 'pill.claude.cli' : s.claude.cli && s.claude.cliLogin === false ? 'pill.claude.login' : 'pill.claude.off');
+    if (!s.claude.watching && s.claude.cli && s.claude.cliLogin === true) pc.className = 'pill on';
+    pc.title = s.claude.cli && s.claude.cliLogin === false ? t('pill.claude.login.t') : t('pill.claude.title');
     pt.className = 'pill ' + (s.tts ? 'on' : 'warn');
     pt.textContent = s.tts ? t('pill.tts.on', { p: s.tts === 'openrouter' ? 'OpenRouter' : 'Fish' }) : t('pill.tts.none');
     pt.title = s.tts ? '' : t('pill.tts.title');
     $('#cliOpt').hidden = !s.claude.cli;
+    if (!s.claude.cli) { const ses = document.querySelector('[name=engine][value=session]'); if (ses) ses.checked = true; }
     if (!state.voicesBuilt) buildVoices();
   } catch { $('#pillClaude').textContent = t('pill.server'); $('#pillClaude').className = 'pill off'; }
 }
@@ -60,15 +63,23 @@ let LOOKS = [], MUSICS = [];
 const lookOf = id => LOOKS.find(l => l.id === id) || LOOKS[0] || { id: 'doodle', theme: 'paper', music: null };
 async function loadLooks() {
   if (!LOOKS.length) { const d = await api('/api/looks').catch(() => ({ looks: [], music: [] })); LOOKS = d.looks; MUSICS = d.music; }
-  $('#looks').innerHTML = LOOKS.map(l => `<button type="button" class="look" role="radio" data-look="${h(l.id)}" aria-checked="${l.id === state.look}"><img src="/ui/look-${h(l.id)}.jpg" alt="" loading="lazy">
-    <b>${h(I18N.en['look.' + l.id] ? t('look.' + l.id) : l.label)}</b><small>${h(I18N.en['look.' + l.id + '.d'] ? t('look.' + l.id + '.d') : '')}</small></button>`).join('');
+  const card = l => `<button type="button" class="look" role="radio" data-look="${h(l.id)}" aria-checked="${l.id === state.look}"><img src="/ui/look-${h(l.id)}.jpg" alt="" loading="lazy">
+    ${l.family === 'motion' ? '<span class="badge">9:16</span>' : ''}<b>${h(I18N.en['look.' + l.id] ? t('look.' + l.id) : l.label)}</b><small>${h(I18N.en['look.' + l.id + '.d'] ? t('look.' + l.id + '.d') : '')}</small></button>`;
+  const group = (fam, key) => { const ls = LOOKS.filter(l => (l.family || 'tvhead') === fam); return ls.length ? `<h4 class="lookgroup">${h(t(key))}</h4><div class="looks">${ls.map(card).join('')}</div>` : ''; };
+  $('#looks').innerHTML = group('motion', 'looks.motion') + group('tvhead', 'looks.tvhead');
   $('#looks').querySelectorAll('[data-look]').forEach(b => b.addEventListener('click', () => setLook(b.dataset.look)));
   $('#musicSel').innerHTML = ['auto', ...MUSICS, 'none'].map(m => `<option value="${h(m)}">${h(t('music.' + m))}</option>`).join('');
   setLook(state.look, true); setMusic(state.music);
 }
+const isMotion = id => lookOf(id).family === 'motion';
 function setLook(l, quiet) {
   state.look = LOOKS.some(x => x.id === l) ? l : 'doodle'; LS.set('look', state.look);
   document.querySelectorAll('#looks [data-look]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.look === state.look)));
+  const motion = isMotion(state.look);
+  $('#styleField').hidden = motion;
+  document.querySelector('.seg [data-lang="both"]').disabled = motion;
+  if (motion) { setFormat('9:16'); if (state.lang === 'both') setLang(UI === 'ru' ? 'ru' : 'en'); }
+  $('#lookHint').textContent = motion ? t('look.motion.hint') : '';
   if (quiet) return;
   if (state.theme !== 'reference') state.theme = lookOf(state.look).theme || 'paper';
   LS.set('theme', state.theme); loadThemes(); setMusic(state.music);
@@ -140,7 +151,7 @@ form.addEventListener('submit', async e => {
     const job = await api('/api/jobs', { method: 'POST', body });
     state.selected = job.id; LS.set('job', job.id);
     form.topic.value = ''; form.notes.value = ''; form.castIdeas.value = ''; form.worldIdeas.value = ''; state.refs = []; drawRefs(); state.picked.clear(); drawPick();
-    msg(t(body.engine === 'cli' ? 'sent.cli' : state.status?.claude.watching ? 'sent.listening' : 'sent.waiting'));
+    msg(t(job.brief?.engine === 'cli' ? 'sent.cli' : job.notice === 'cli_login' ? 'sent.login' : state.status?.claude.watching ? 'sent.listening' : 'sent.waiting'));
     await refreshJobs(); await refreshDetail(true);
   } catch (err) { msg(err.message, true); }
   $('#sendBtn').disabled = false;
@@ -182,7 +193,7 @@ async function refreshDetail(force) {
   lastSig = sig;
   const d = $('#detail'), step = STEP_OF[j.status];
   let html = `<div class="dhead"><div><h2>${h(j.brief?.topic || j.id)}</h2>
-      <div class="meta">${h(j.id)} · ${h((j.brief?.languages || []).join(' + ').toUpperCase())} · ${h(j.storyboard?.format || j.brief?.format || '16:9')} · ~${h(j.brief?.duration || '?')} ${h(t('sec'))} · ${h(t('meta.look'))}: ${h(I18N.en['look.' + (j.brief?.look || 'doodle')] ? t('look.' + (j.brief?.look || 'doodle')) : j.brief?.look)} · ${h(t('meta.style'))}: ${h(I18N.en['theme.' + j.brief?.theme] ? t('theme.' + j.brief.theme) : j.brief?.theme || 'paper')}${j.brief?.refs?.length ? ` · ${h(t('meta.refs'))}: ${j.brief.refs.length}` : ''}</div></div>
+      <div class="meta">${h(j.id)} · ${h((j.brief?.languages || []).join(' + ').toUpperCase())} · ${h(j.storyboard?.format || j.brief?.format || '16:9')} · ~${h(j.brief?.duration || '?')} ${h(t('sec'))} · ${h(t('meta.look'))}: ${h(I18N.en['look.' + (j.brief?.look || 'doodle')] ? t('look.' + (j.brief?.look || 'doodle')) : j.brief?.look)} ${j.brief?.family === 'motion' ? '' : ` · ${h(t('meta.style'))}: ${h(I18N.en['theme.' + j.brief?.theme] ? t('theme.' + j.brief.theme) : j.brief?.theme || 'paper')}`}${j.brief?.refs?.length ? ` · ${h(t('meta.refs'))}: ${j.brief.refs.length}` : ''}</div></div>
       <span class="chip ${h(j.status)}">${h(statusText(j.status))}</span></div>
     <ol class="steps">${STEPS.map((k, i) => `<li class="step ${i < step || j.status === 'done' ? 'done' : i === step ? 'now' : ''}">${h(t('step.' + k))}</li>`).join('')}</ol>`;
 
@@ -191,6 +202,7 @@ async function refreshDetail(force) {
     const text = t(j.status === 'storyboarding' ? 'wait.storyboarding' : listening || cli ? (j.status === 'revise' ? 'wait.revise' : 'wait.ack') : 'wait.idle');
     const last = j.history?.length ? j.history[j.history.length - 1] : null;
     html += `<div class="wait">${tvSvg()}<div><b>${h(text)}</b>${last ? `<div class="meta">${h(I18N.en['hist.' + last.status] ? t('hist.' + last.status) : last.msg)}</div>` : ''}</div></div>`;
+    if (j.notice === 'cli_login' && j.status === 'brief') html += `<div class="notice">${t('cli.login')}</div>`;
   }
   if (j.brief && (j.brief.libraryItems?.length || j.brief.castIdeas || j.brief.worldIdeas)) html += briefCastHtml(j.brief);
   if (j.storyboard?.cast && ['storyboard', 'rendering', 'done', 'revise', 'error'].includes(j.status)) html += castHtml(j.storyboard);
@@ -217,7 +229,15 @@ async function refreshDetail(force) {
   });
 }
 const fmt = s => s == null ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function motionBoardHtml(j) {
+  const sb = j.storyboard;
+  return `<h3>${h(t('board.motion', { n: sb.scenes.length }))}${sb.duration ? ` · ${fmt(sb.duration)}` : ''}</h3>
+    ${sb.sheet ? `<a href="${h(sb.sheet)}" target="_blank" class="sheet"><img src="${h(sb.sheet)}" alt="${h(t('board.sheet'))}"></a>` : ''}
+    <ol class="mscenes">${sb.scenes.map(s => `<li><span class="num">${fmt(s.from)}</span><div>${s.note ? `<div class="note">${h(s.note)}</div>` : ''}${Object.values(s.say).map(v => `<div>${h(v)}</div>`).join('')}</div></li>`).join('')}</ol>
+    <p class="meta">${h(t('board.project'))}: ${h(sb.project || '')}</p>`;
+}
 function boardHtml(j) {
+  if (j.storyboard?.motion) return motionBoardHtml(j);
   const sb = j.storyboard, editable = j.status === 'storyboard';
   const dl = sb.director ? `<p class="director">🎬 <a href="${h(sb.director.proposal)}" target="_blank">${h(t('dir.proposal'))}</a> · <a href="${h(sb.director.prompts)}" target="_blank">${h(t('dir.prompts'))}</a>${sb.director.checks ? ` · <span title="${h(sb.director.checkText)}">⚠ ${sb.director.checks}</span>` : ''}</p>` : '';
   return `<h3>${h(t('board.h', { n: sb.scenes.length }))}${sb.duration ? ` · ${fmt(sb.duration)}` : ''}</h3>${dl}<div class="board${sb.format === '9:16' ? ' tall' : ''}">${sb.scenes.map(s => `
@@ -241,11 +261,47 @@ function renderProgress(j) {
 function videosHtml(j) {
   const outs = Object.values(j.outputs || {});
   if (!outs.length) return '';
+  const src = o => o.url || `/files/${o.file}`;
   return `<h3>${h(t('videos.h'))}</h3><div class="videos">${outs.map(o => `<figure${o.height > o.width ? ' class="tall"' : ''}>
-    <video controls preload="metadata" src="/files/${h(o.file)}#t=1.5"></video>
+    <video controls preload="metadata" src="${h(src(o))}#t=1.5"></video>
     <figcaption><b>${h(o.lang.toUpperCase())}</b> <span class="meta">${o.width}×${o.height} · ${fmt(o.duration)} · ${o.mb} ${h(t('mb'))}${o.silentLines ? ' · ' + h(t('silent')) : ''}</span>
-      <span><a href="/files/${h(o.file)}" download>mp4</a> · <a href="/files/${h(o.file.replace(/\.mp4$/, '.srt'))}" download>srt</a></span></figcaption></figure>`).join('')}</div>`;
+      <span><a href="${h(src(o))}" download>mp4</a>${o.share ? ` · <a href="${h(o.share)}" download>${h(t('media.share'))}</a>` : ''}${o.file ? ` · <a href="/files/${h(o.file.replace(/\.mp4$/, '.srt'))}" download>srt</a>` : ''}</span></figcaption></figure>`).join('')}</div>${o0(outs)?.path ? `<p class="meta">${h(t('videos.saved'))}: ${h(o0(outs).path)}</p>` : ''}`;
 }
+const o0 = outs => outs[0];
+// ─── videos: every mp4 in the MOTION folder ───────────────────────
+const LIKE = [[/anime/, 'motion-anime'], [/tower/, 'motion-tower'], [/claude-set/, 'motion-set'], [/screen/, 'motion-screen'], [/claude-reel|fx-demo/, 'motion-reel'],
+  [/market-epochs|cat-indicator|norilsk|^ep\d|plecho|neiroset|goroskop|babushka|popugai|series|ai\//, 'motion-montage'], [/underground/, 'underground'], [/marker/, 'marker'], [/igrok/, 'pixel']];
+const likeOf = it => (LIKE.find(([re]) => re.test(`${it.group}/${it.name}`)) || [])[1] || null;
+async function loadMedia() {
+  const d = await api('/api/media').catch(() => ({ items: [], root: '' }));
+  state.media = d.items; $('#mediaRoot').textContent = d.root ? t('media.root', { p: d.root, n: d.items.length }) : '';
+  $('#mediaCount').textContent = d.items.length || ''; drawMedia();
+}
+function drawMedia() {
+  const q = ($('#mediaQ').value || '').toLowerCase(), mf = state.mediaFmt || 'all';
+  const list = (state.media || []).filter(it => (!q || `${it.group} ${it.name}`.toLowerCase().includes(q)) && (mf === 'all' || (mf === 'v') === !!it.vertical));
+  const groups = {}; list.forEach(it => (groups[it.group || '·'] ||= []).push(it));
+  $('#mediaGrid').innerHTML = list.length ? Object.entries(groups).map(([g, items]) => `<h3 class="mgroup">${h(g === '·' ? t('media.top') : g)} <small>${items.length}</small></h3>
+    <div class="mgrid">${items.map(it => `<button type="button" class="mcard${it.vertical ? ' tall' : ''}" data-mid="${h(it.id)}">
+      <img src="/media/${h(it.id)}/thumb" alt="" loading="lazy"><span class="dur">${fmt(it.dur)}</span>
+      <b>${h(it.name)}</b><small>${it.w}×${it.h} · ${it.mb} ${h(t('mb'))}${it.share ? ' · ' + h(t('media.share')) : ''}</small></button>`).join('')}</div>`).join('')
+    : `<div class="card empty"><p>${h(t('media.empty'))}</p></div>`;
+  $('#mediaGrid').querySelectorAll('[data-mid]').forEach(b => b.addEventListener('click', () => openPlay(state.media.find(x => x.id === b.dataset.mid))));
+}
+function openPlay(it) {
+  const dlg = $('#playDlg'), v = $('#playVid');
+  v.src = `/media/${it.id}`; v.className = it.vertical ? 'tall' : '';
+  $('#playName').textContent = it.name; $('#playMeta').textContent = `${it.group ? it.group + ' · ' : ''}${fmt(it.dur)} · ${it.w}×${it.h} · ${it.mb} ${t('mb')}`;
+  $('#playDl').href = `/media/${it.id}`; $('#playDl').setAttribute('download', it.name + '.mp4');
+  $('#playShare').hidden = !it.share; if (it.share) { $('#playShare').href = `/media/${it.share}`; $('#playShare').setAttribute('download', it.name + '_share.mp4'); }
+  const like = likeOf(it); $('#playLike').hidden = !like; $('#playLike').onclick = () => { dlg.close(); setView('studio'); setLook(like); document.querySelector(`[data-look="${like}"]`)?.scrollIntoView({ block: 'center' }); $('#briefForm').topic.focus(); };
+  dlg.showModal(); v.play().catch(() => {});
+}
+$('#playClose').addEventListener('click', () => $('#playDlg').close());
+$('#playDlg').addEventListener('close', () => { const v = $('#playVid'); v.pause(); v.removeAttribute('src'); v.load(); });
+$('#mediaQ').addEventListener('input', drawMedia);
+document.querySelectorAll('#mediaFmt button').forEach(b => b.addEventListener('click', () => { state.mediaFmt = b.dataset.mf; document.querySelectorAll('#mediaFmt button').forEach(x => x.setAttribute('aria-checked', String(x === b))); drawMedia(); }));
+
 function tvSvg() {
   return `<svg class="tv" viewBox="0 0 64 58" aria-hidden="true"><path d="M24 12 18 2M40 12l6-10" stroke="#141414" stroke-width="4" stroke-linecap="round"/><rect x="4" y="12" width="56" height="44" rx="8" fill="#585858" stroke="#141414" stroke-width="4"/><rect class="scr" x="12" y="19" width="40" height="30" rx="5" fill="#e9ebeb" stroke="#141414" stroke-width="3"/><circle cx="25" cy="31" r="3" fill="#141414"/><circle cx="39" cy="31" r="3" fill="#141414"/></svg>`;
 }
@@ -273,8 +329,9 @@ function castHtml(sb) {
 function setView(v) {
   LS.set('view', v);
   document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.view === v ? 'page' : 'false'));
-  $('#studioView').hidden = v !== 'studio'; $('#libView').hidden = v !== 'library';
+  $('#studioView').hidden = v !== 'studio'; $('#libView').hidden = v !== 'library'; $('#mediaView').hidden = v !== 'media';
   if (v === 'library') loadLibrary();
+  if (v === 'media') loadMedia();
 }
 document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
@@ -340,6 +397,7 @@ $('#quitBtn').addEventListener('click', async () => {
 // ─── boot ───────────────────────────────────────────────────────
 setUI(UI);
 setView(LS.get('view', 'studio'));
+api('/api/media').then(d => { $('#mediaCount').textContent = d.items.length || ''; }).catch(() => {});
 refreshJobs().then(() => refreshDetail(true));
 setInterval(refreshStatus, 4000);
 setInterval(refreshJobs, 3000);
