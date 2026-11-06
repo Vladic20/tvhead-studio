@@ -11,6 +11,31 @@ A [Claude Code](https://claude.com/claude-code) skill and a local app. Type a to
 
 The promo video above was made with the skill itself: `episodes/promo/story.json` → `node make.mjs promo`.
 
+## Four skills in one plugin
+
+| Skill | What it makes |
+|---|---|
+| `tvhead-video` | narrated doodle / cartoon / stickman explainers in 13+ looks, the local studio app (brief → storyboard → render) |
+| `motion-studio` | social-media motion reels in Remotion, **five styles from one command**: kinetic motion with a voxel mascot, cozy-3D elevator tower, cozy-3D film set with a clapperboard, an **anime opening** (cel shading, ink outlines, impact frames, speed lines), and a **"shot on a phone"** laptop-screen look (handheld camera, depth of field) |
+| `ai-montage` | documentary montage from real material: charts from real data, licensed archive photos, marker over footage, honest maths |
+| `blender-3d` | 3D scenes and plates from Blender 5.2 (headless or via Blender MCP), a ready clay-mascot turntable in cozy or toon look, PNG + alpha for compositing |
+
+![motion-studio styles: motion reel, tower, film set, anime, phone shot, Blender plate](docs/motion-studio-styles.jpg)
+
+`motion-studio` in short:
+
+```bash
+bash plugins/tvhead/skills/motion-studio/scripts/setup-kit.sh --python --plugins   # once: libraries, Whisper, Blender & GSAP skills
+bash plugins/tvhead/skills/motion-studio/scripts/new-project.sh ~/Desktop/MOTION/my-reel anime   # reel | tower | set | anime | screen
+npm run voice && npm run asr && npm run music      # free narration, a pronunciation check, generated music
+npm run stills -- 60,200,400                       # one contact sheet before rendering
+npm run render && npm run seams                    # render, then check every cut
+npm run deliver -- ~/Desktop/MOTION my-reel        # master at −14 LUFS + a phone copy under 29 MB, both verified
+```
+
+Every frame is a pure function of time, captions stay inside the Reels/TikTok/Shorts safe zone (x 60–960, y 160–1420),
+numbers on screen come from code or real data, and every style was checked from a clean project.
+
 ## Features
 
 - **Two engineering formats for vertical shorts.** `underground`: a flat cutaway of a hidden workshop (under a garage, in a basement or a dacha attic) that gets upgraded line by line — HUD counter, upgrade chips, stamps, two-tone captions and a summary card. `marker`: a hand with felt-tip markers draws the object, strikes problems in red, draws fixes in green and blue with real arithmetic next to them, then flips to a summary page — with marker squeaks synced to every stroke.
@@ -57,7 +82,7 @@ You can also skip the chat: the "Claude Code CLI in the background" mode runs `c
 /plugin install tvhead@tvhead-studio
 ```
 
-You need Node ≥ 18, ffmpeg and Google Chrome. On first use the skill sets up its studio in `~/tvhead-studio`.
+You need Node ≥ 18, ffmpeg and Google Chrome. On first use the skill sets up its studio in `~/tvhead-studio`. For `motion-studio` run its `scripts/setup-kit.sh` once (it fills `~/motion-kit`); for `blender-3d` install Blender 5.2 LTS.
 
 Put your key into `~/tvhead-studio/.env`:
 
@@ -92,6 +117,10 @@ node voices.mjs deep calm --lang en  # search Fish voices (no key needed)
 ## What's inside
 
 ```
+plugins/tvhead/skills/motion-studio/   SKILL.md, references/ (styles, anime, cozy3d, phone-shot, montage, fx libraries, audio, Blender),
+                                       template/ (Remotion project: reel, cozy3d, anime, screen, montage lib, tools), external/ (MIT recipes)
+plugins/tvhead/skills/ai-montage/      documentary montage on the motion-studio template
+plugins/tvhead/skills/blender-3d/      scripts/plate.py — clay mascot plate (cozy / toon, turntable / hop / still)
 plugins/tvhead/skills/tvhead-video/
   SKILL.md                 the workflow Claude follows (chat requests and app jobs)
   references/              story.json API, motion rules, writing guide, reference sheet
@@ -106,6 +135,7 @@ plugins/tvhead/skills/tvhead-video/
 ## Credits
 
 - The motion rules are distilled from open skills: [HyperFrames](https://github.com/heygen-com/hyperframes), [GSAP skills](https://github.com/greensock/gsap-skills), [Charlie's motion-graphics-skills](https://github.com/charlie947/motion-graphics-skills), [video-shotcraft](https://github.com/Vincentwei1021/video-shotcraft), [product-launch-motion](https://github.com/AbubakrChan/product-launch-motion) and [claude-motion-design](https://github.com/howseen-ai/claude-motion-design). For more, see [awesome-claude-video-skills](https://github.com/zhuyansen/awesome-claude-video-skills).
+- `motion-studio` builds on [Remotion](https://github.com/remotion-dev/remotion) and its [skills](https://github.com/remotion-dev/skills), [three.js](https://github.com/mrdoob/three.js), [GSAP](https://github.com/greensock/GSAP), [LYGIA](https://github.com/patriciogonzalezvivo/lygia), [Flubber](https://github.com/veltman/flubber), [Rough.js](https://github.com/rough-stuff/rough), [faster-whisper](https://github.com/SYSTRAN/faster-whisper) and [Chatterbox](https://github.com/resemble-ai/chatterbox); it vendors recipes from [charlie947/motion-graphics-skills](https://github.com/charlie947/motion-graphics-skills) and [howseen-ai/claude-motion-design](https://github.com/howseen-ai/claude-motion-design) (both MIT, licences kept in `external/`). `blender-3d` works with [Blender Agent Skills](https://github.com/EL4CTEO/blender-skills). The cozy-3D, anime and phone-shot looks were rebuilt from scratch after reference reels; no assets from them are used.
 - The code-rendering approach started from [garazh-skill](https://github.com/lubluniky/garazh-skill) (MIT); the cartoon look (warm garage, outlines, badges, karaoke captions, the Claude chat on a laptop) is modelled on its cartoon reel.
 - The two sample After Effects exports in `episodes/look-lottie/ae` come from the [lottie-web](https://github.com/airbnb/lottie-web) test suite (MIT); lottie-web plays them (MIT).
 - Fonts: Patrick Hand, Neucha, Pangolin, Rubik, JetBrains Mono, Inter, Bangers, Russo One, Cinzel, Cormorant SC and Press Start 2P (SIL OFL 1.1).

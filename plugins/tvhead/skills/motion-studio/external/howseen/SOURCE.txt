@@ -1,0 +1,1 @@
+howseen-ai/claude-motion-design @ 3d90d34 2026-10-02

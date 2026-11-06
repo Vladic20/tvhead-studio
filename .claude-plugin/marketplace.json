@@ -1,12 +1,14 @@
 {
   "name": "tvhead-studio",
-  "owner": { "name": "Vladic20" },
-  "description": "Topic → finished narrated doodle or cartoon motion video (EN/RU) for Claude Code, with a local studio app",
+  "owner": {
+    "name": "Vladic20"
+  },
+  "description": "Topic → finished motion video for Claude Code: narrated doodle explainers with a studio app, Remotion social reels in five styles (incl. anime and cozy 3D), documentary montage and Blender 3D plates",
   "plugins": [
     {
       "name": "tvhead",
       "source": "./plugins/tvhead",
-      "description": "Ask for a video on any topic, get a 1080p mp4 with free Fish Audio narration in English, Russian or both: TV-head doodles, velocity-matched transitions, kinetic type, infographics; brief/storyboard/render app"
+      "description": "tvhead-video + motion-studio + ai-montage + blender-3d: EN/RU videos, 16:9 or 9:16, free narration and music, five reel styles (motion, cozy-3D tower, film set, anime, phone shot), documentary montage, Blender plates"
     }
   ]
 }
